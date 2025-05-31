@@ -1,0 +1,1077 @@
+# Module: api_specification_v1
+# Version: 1.0.0
+# Dependencies: config_env_v1, db_schema_foundation_v1, auth_strategy_v1
+# Provides: RESTful API specification, OpenAPI documentation, endpoint definitions
+# Integration Points: Mobile apps, admin dashboard, external integrations
+# Last Updated: 2025-05-31
+
+openapi: 3.0.3
+info:
+  title: Advanced Trades Management Platform API
+  description: |
+    RESTful API for connecting customers with verified contractors through mobile applications.
+    
+    ## Authentication
+    - Most endpoints require JWT authentication via `Authorization: Bearer <token>` header
+    - Use `/auth/login` to obtain access and refresh tokens
+    - Use `/auth/refresh` to renew access tokens
+    
+    ## Rate Limiting
+    - 100 requests per 15-minute window for authenticated users
+    - 20 requests per 15-minute window for unauthenticated users
+    
+    ## Error Handling
+    All error responses follow this format:
+    ```json
+    {
+      "error": "Error message",
+      "code": "ERROR_CODE",
+      "details": {}
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: Trades Platform API Support
+    email: api-support@tradesplatform.com
+  license:
+    name: Proprietary
+servers:
+  - url: https://api.tradesplatform.com/v1
+    description: Production server
+  - url: https://staging-api.tradesplatform.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Development server
+
+# =================================================================
+# SECURITY SCHEMES
+# =================================================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token for authenticated requests
+
+  # =================================================================
+  # REUSABLE SCHEMAS
+  # =================================================================
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        userType:
+          type: string
+          enum: [customer, contractor, admin, support]
+        accountStatus:
+          type: string
+          enum: [pending, active, suspended, deactivated, banned]
+        emailVerified:
+          type: boolean
+        phoneVerified:
+          type: boolean
+        profileImageUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            phone:
+              type: string
+            dateOfBirth:
+              type: string
+              format: date
+            address:
+              $ref: '#/components/schemas/Address'
+            preferences:
+              $ref: '#/components/schemas/UserPreferences'
+
+    Address:
+      type: object
+      properties:
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+        coordinates:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+
+    UserPreferences:
+      type: object
+      properties:
+        emailNotifications:
+          type: boolean
+        smsNotifications:
+          type: boolean
+        pushNotifications:
+          type: boolean
+        distanceUnit:
+          type: string
+          enum: [miles, kilometers]
+        timezone:
+          type: string
+        language:
+          type: string
+
+    ContractorProfile:
+      allOf:
+        - $ref: '#/components/schemas/UserProfile'
+        - type: object
+          properties:
+            businessName:
+              type: string
+            businessType:
+              type: string
+            primaryTrade:
+              $ref: '#/components/schemas/TradeCategory'
+            secondaryTrades:
+              type: array
+              items:
+                $ref: '#/components/schemas/TradeCategory'
+            yearsExperience:
+              type: integer
+            serviceDescription:
+              type: string
+            hourlyRate:
+              type: number
+            minimumJobValue:
+              type: number
+            workRadius:
+              type: integer
+            availableForWork:
+              type: boolean
+            totalJobsCompleted:
+              type: integer
+            averageRating:
+              type: number
+            verificationStatus:
+              type: object
+              properties:
+                backgroundCheck:
+                  type: string
+                  enum: [pending, in_progress, verified, failed, expired]
+                licenseVerification:
+                  type: string
+                  enum: [pending, in_progress, verified, failed, expired]
+                insuranceVerification:
+                  type: string
+                  enum: [pending, in_progress, verified, failed, expired]
+
+    TradeCategory:
+      type: string
+      enum:
+        - plumbing
+        - hvac
+        - carpentry
+        - electrical
+        - general_handyman
+        - painting
+        - flooring
+        - roofing
+        - appliance_repair
+        - landscaping
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        contractorId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        tradeCategory:
+          $ref: '#/components/schemas/TradeCategory'
+        status:
+          type: string
+          enum: [draft, posted, assigned, in_progress, completed, approved, cancelled, disputed]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        serviceAddress:
+          $ref: '#/components/schemas/Address'
+        estimatedCost:
+          type: number
+        quotedPrice:
+          type: number
+        finalPrice:
+          type: number
+        preferredDate:
+          type: string
+          format: date
+        preferredTimeStart:
+          type: string
+          format: time
+        preferredTimeEnd:
+          type: string
+          format: time
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobPhoto'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    JobPhoto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        photoUrl:
+          type: string
+          format: uri
+        photoType:
+          type: string
+          enum: [before, during, after, issue, completion]
+        caption:
+          type: string
+        uploadedBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        amountTotal:
+          type: number
+        amountContractor:
+          type: number
+        amountPlatformFee:
+          type: number
+        status:
+          type: string
+          enum: [pending, processing, completed, failed, refunded, disputed]
+        paymentMethod:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        reviewerId:
+          type: string
+          format: uuid
+        revieweeId:
+          type: string
+          format: uuid
+        overallRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        qualityRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        communicationRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        timelinessRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        reviewText:
+          type: string
+        wouldRecommend:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        messageText:
+          type: string
+        messageType:
+          type: string
+          enum: [text, image, document, system]
+        attachmentUrl:
+          type: string
+          format: uri
+        sentAt:
+          type: string
+          format: date-time
+        readAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+
+# =================================================================
+# API ENDPOINTS
+# =================================================================
+paths:
+  # =================================================================
+  # AUTHENTICATION ENDPOINTS
+  # =================================================================
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user account
+      description: Create a new user account (customer or contractor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, firstName, lastName, userType]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                userType:
+                  type: string
+                  enum: [customer, contractor]
+                phone:
+                  type: string
+                referralCode:
+                  type: string
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  tokens:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+                      expiresAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: Bad request - validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                deviceInfo:
+                  type: object
+                  properties:
+                    deviceType:
+                      type: string
+                      enum: [mobile, web, desktop]
+                    deviceId:
+                      type: string
+                    userAgent:
+                      type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  tokens:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+                      expiresAt:
+                        type: string
+                        format: date-time
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Get new access token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout user
+      description: Revoke refresh token and end session
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Logout successful
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # =================================================================
+  # USER MANAGEMENT ENDPOINTS
+  # =================================================================
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Users]
+      summary: Update user profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phone:
+                  type: string
+                address:
+                  $ref: '#/components/schemas/Address'
+                preferences:
+                  $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # =================================================================
+  # JOB MANAGEMENT ENDPOINTS
+  # =================================================================
+  /jobs:
+    get:
+      tags: [Jobs]
+      summary: Get jobs list
+      description: Get paginated list of jobs based on user type and filters
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, posted, assigned, in_progress, completed, approved, cancelled, disputed]
+        - name: tradeCategory
+          in: query
+          schema:
+            $ref: '#/components/schemas/TradeCategory'
+        - name: location
+          in: query
+          description: Search radius from lat,lng coordinates
+          schema:
+            type: string
+            pattern: '^-?\d+\.?\d*,-?\d+\.?\d*,\d+$'
+            example: "41.5868,-93.6250,25"
+      responses:
+        '200':
+          description: Jobs retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Job'
+
+    post:
+      tags: [Jobs]
+      summary: Create new job
+      description: Create a new job posting (customers only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description, tradeCategory, serviceAddress]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                tradeCategory:
+                  $ref: '#/components/schemas/TradeCategory'
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+                serviceAddress:
+                  $ref: '#/components/schemas/Address'
+                estimatedCost:
+                  type: number
+                preferredDate:
+                  type: string
+                  format: date
+                preferredTimeStart:
+                  type: string
+                  format: time
+                preferredTimeEnd:
+                  type: string
+                  format: time
+      responses:
+        '201':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Only customers can create jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      summary: Get job details
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Jobs]
+      summary: Update job
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                estimatedCost:
+                  type: number
+                preferredDate:
+                  type: string
+                  format: date
+                status:
+                  type: string
+                  enum: [posted, cancelled]
+      responses:
+        '200':
+          description: Job updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '403':
+          description: Not authorized to update this job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /jobs/{jobId}/apply:
+    post:
+      tags: [Jobs]
+      summary: Apply for job
+      description: Contractor applies for a job
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quotedPrice]
+              properties:
+                quotedPrice:
+                  type: number
+                message:
+                  type: string
+                estimatedCompletionDate:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Application submitted successfully
+        '403':
+          description: Only contractors can apply for jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /jobs/{jobId}/assign:
+    post:
+      tags: [Jobs]
+      summary: Assign job to contractor
+      description: Customer assigns job to a contractor
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contractorId]
+              properties:
+                contractorId:
+                  type: string
+                  format: uuid
+                agreedPrice:
+                  type: number
+      responses:
+        '200':
+          description: Job assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  # =================================================================
+  # PAYMENT ENDPOINTS
+  # =================================================================
+  /payments/intent:
+    post:
+      tags: [Payments]
+      summary: Create payment intent
+      description: Create Stripe payment intent for job payment
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [jobId, amount]
+              properties:
+                jobId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                paymentMethod:
+                  type: string
+      responses:
+        '201':
+          description: Payment intent created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientSecret:
+                    type: string
+                  paymentIntentId:
+                    type: string
+
+  /payments/{paymentId}/confirm:
+    post:
+      tags: [Payments]
+      summary: Confirm payment
+      description: Confirm payment completion
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+
+  # =================================================================
+  # MESSAGING ENDPOINTS
+  # =================================================================
+  /conversations:
+    get:
+      tags: [Messages]
+      summary: Get user conversations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Conversations retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    jobId:
+                      type: string
+                      format: uuid
+                    otherUser:
+                      $ref: '#/components/schemas/User'
+                    lastMessage:
+                      $ref: '#/components/schemas/Message'
+                    unreadCount:
+                      type: integer
+
+  /conversations/{conversationId}/messages:
+    get:
+      tags: [Messages]
+      summary: Get conversation messages
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Messages retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Message'
+
+    post:
+      tags: [Messages]
+      summary: Send message
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messageText]
+              properties:
+                messageText:
+                  type: string
+                messageType:
+                  type: string
+                  enum: [text, image, document]
+                  default: text
+      responses:
+        '201':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User profile management
+  - name: Jobs
+    description: Job posting and management
+  - name: Payments
+    description: Payment processing
+  - name: Messages
+    description: In-app messaging system
