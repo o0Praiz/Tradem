@@ -1,0 +1,23 @@
+## AI Performance Preferences
+
+### Enterprise Development Standards (Matured)
+- **Architecture**: Production-proven microservices with horizontal scaling capabilities
+- **Code Quality**: TypeScript-first with 95%+ test coverage, comprehensive error handling
+- **Database**: Optimized PostgreSQL with PostGIS, Redis clustering, structured logging
+- **API Design**: OpenAPI 3.0 compliant REST with real-time WebSocket integration
+- **Mobile**: React Native with platform-specific optimizations and offline capabilities
+- **Infrastructure**: Cloud-native Kubernetes deployment with auto-scaling and monitoring
+
+### Advanced Documentation Standards
+- **Living Documentation**: Self-updating API docs, automated architecture diagrams
+- **Security Documentation**: Comprehensive security reviews, compliance tracking
+- **Performance Documentation**: Benchmarks, optimization guides, scaling playbooks
+- **Integration Documentation**: Third-party service integration guides and fallback procedures
+- **Operational Documentation**: Incident response, disaster recovery, and maintenance procedures
+
+### Refined Business Logic Priorities
+1. **Marketplace Excellence**: AI-powered matching, dynamic pricing, quality prediction
+2. **Operational Efficiency**: Automated workflows, predictive maintenance, resource optimization
+3. **Enterprise Security**: PCI DSS compliance, data encryption, audit trails
+4. **Scalable Growth**: Multi-market expansion tools, franchise capabilities, white-label solutions
+5. **Regulatory Mastery**: State-by-state compliance automation, licensing verification, insurance monitoring
